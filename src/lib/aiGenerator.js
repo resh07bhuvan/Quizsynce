@@ -32,7 +32,7 @@ Rules:
       'X-Title': 'QuizSynce'
     },
     body: JSON.stringify({
-      model: 'mistralai/mistral-small-3.2-24b-instruct:free',
+      model: 'openrouter/auto',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 2000
@@ -87,7 +87,7 @@ The correct answer must always be at index 0 in options (it will be shuffled lat
       'X-Title': 'QuizSynce'
     },
     body: JSON.stringify({
-      model: 'mistralai/mistral-7b-instruct:free',
+      model: 'openrouter/auto',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 3000
