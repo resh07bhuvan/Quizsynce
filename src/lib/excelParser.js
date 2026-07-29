@@ -116,4 +116,7 @@ export function downloadExcelTemplate() {
   const ws2 = XLSX.utils.aoa_to_sheet(simpleData)
 
   XLSX.utils.book_append_sheet(wb, ws1, 'Full Format (No AI needed)')
-  XLSX.utils.book_append_sheet(wb, ws2,
+  XLSX.utils.book_append_sheet(wb, ws2, 'Simple Format (AI generates options)')
+
+  XLSX.writeFile(wb, 'QuizSynce_Template.xlsx')
+}
