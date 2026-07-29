@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import './QuizPlay.css'
@@ -19,6 +19,8 @@ export default function QuizPlay() {
   const [submitting, setSubmitting] = useState(false)
   const [finished, setFinished] = useState(false)
   const [livePlayers, setLivePlayers] = useState([])
+  const [timeLeft, setTimeLeft] = useState(null)
+  const timerRef = useRef(null)
 
   const playerName = sessionStorage.getItem('player_name')
   const sessionId = sessionStorage.getItem(`session_${quizId}`)
@@ -30,6 +32,46 @@ export default function QuizPlay() {
     }
     init()
   }, [])
+
+  // Timer effect
+  useEffect(() => {
+    if (loading || finished || revealed || timeLeft === null) return
+
+    if (timeLeft <= 0) {
+      handleTimeout()
+      return
+    }
+
+    timerRef.current = setTimeout(() => {
+      setTimeLeft(prev => prev - 1)
+    }, 1000)
+
+    return () => clearTimeout(timerRef.current)
+  }, [timeLeft, loading, finished, revealed])
+
+  function startTimer(seconds) {
+    clearTimeout(timerRef.current)
+    setTimeLeft(seconds)
+  }
+
+  async function handleTimeout() {
+    if (revealed) return
+    setRevealed(true)
+    setSelected(null)
+
+    const q = questions[currentIndex]
+    const newAnswers = { ...answers, [currentIndex]: -1 }
+    setAnswers(newAnswers)
+
+    await supabase
+      .from('sessions')
+      .update({
+        score,
+        answers: newAnswers,
+        answers_count: Object.keys(newAnswers).length
+      })
+      .eq('id', sessionId)
+  }
 
   const init = useCallback(async () => {
     const [{ data: quizData }, { data: qData }, { data: sessData }] = await Promise.all([
@@ -56,7 +98,10 @@ export default function QuizPlay() {
         setFinished(true)
       } else {
         setCurrentIndex(answeredCount)
+        startTimer(quizData.timer || 12)
       }
+    } else {
+      startTimer(quizData.timer || 12)
     }
 
     fetchLivePlayers()
@@ -97,6 +142,7 @@ export default function QuizPlay() {
 
   async function handleAnswer(optionIndex) {
     if (revealed || submitting) return
+    clearTimeout(timerRef.current)
     setSelected(optionIndex)
     setRevealed(true)
     setSubmitting(true)
@@ -133,6 +179,7 @@ export default function QuizPlay() {
       setCurrentIndex(prev => prev + 1)
       setSelected(null)
       setRevealed(false)
+      startTimer(quiz.timer || 12)
     }
   }
 
@@ -167,10 +214,7 @@ export default function QuizPlay() {
             </p>
             <div className="divider" style={{ margin: '24px 0' }}></div>
             <p className="text-sm text-muted">Waiting for others to finish...</p>
-            <button
-              className="btn btn-primary mt-4"
-              onClick={() => navigate(`/quiz/${quizId}/results`)}
-            >
+            <button className="btn btn-primary mt-4" onClick={() => navigate(`/quiz/${quizId}/results`)}>
               View Results
             </button>
           </div>
@@ -197,7 +241,9 @@ export default function QuizPlay() {
   const q = questions[currentIndex]
   if (!q) return null
 
-  const progress = ((currentIndex) / questions.length) * 100
+  const progress = (currentIndex / questions.length) * 100
+  const timerPercent = timeLeft !== null ? (timeLeft / (quiz.timer || 12)) * 100 : 100
+  const timerColor = timeLeft <= 3 ? 'var(--error)' : timeLeft <= 6 ? 'var(--warning)' : 'var(--accent)'
 
   return (
     <div className="play-page">
@@ -217,74 +263,28 @@ export default function QuizPlay() {
       </div>
 
       <main className="play-main container-sm">
-        <div className="q-counter">
-          <span>{currentIndex + 1} / {questions.length}</span>
+        <div className="q-counter-row">
+          <span className="q-counter">{currentIndex + 1} / {questions.length}</span>
+          {timeLeft !== null && !revealed && (
+            <div className="timer-wrap">
+              <div className="timer-ring">
+                <svg width="44" height="44" viewBox="0 0 44 44">
+                  <circle cx="22" cy="22" r="18" fill="none" stroke="var(--bg-elevated)" strokeWidth="4"/>
+                  <circle
+                    cx="22" cy="22" r="18"
+                    fill="none"
+                    stroke={timerColor}
+                    strokeWidth="4"
+                    strokeDasharray={`${2 * Math.PI * 18}`}
+                    strokeDashoffset={`${2 * Math.PI * 18 * (1 - timerPercent / 100)}`}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease', transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                  />
+                </svg>
+                <span className="timer-number" style={{ color: timerColor }}>{timeLeft}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="question-card card">
-          <h2 className="question-text">{q.question}</h2>
-        </div>
-
-        <div className="options-grid">
-          {q.options.map((opt, i) => {
-            let cls = 'option-btn'
-            if (revealed) {
-              if (i === q.correct) cls += ' correct'
-              else if (i === selected && selected !== q.correct) cls += ' wrong'
-              else cls += ' dim'
-            } else if (selected === i) {
-              cls += ' selected'
-            }
-
-            return (
-              <button
-                key={i}
-                className={cls}
-                onClick={() => handleAnswer(i)}
-                disabled={revealed}
-              >
-                <span className="option-letter">{String.fromCharCode(65 + i)}</span>
-                <span className="option-text">{opt}</span>
-                {revealed && i === q.correct && (
-                  <span className="option-check">✓</span>
-                )}
-                {revealed && i === selected && selected !== q.correct && (
-                  <span className="option-check">✕</span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {revealed && (
-          <div className="reveal-panel">
-            <div className={`result-badge ${selected === q.correct ? 'result-correct' : 'result-wrong'}`}>
-              {selected === q.correct ? '+10 points!' : 'Not quite'}
-            </div>
-            {q.explanation && (
-              <p className="explanation-text">{q.explanation}</p>
-            )}
-            <button className="btn btn-primary btn-lg w-full mt-3" onClick={handleNext}>
-              {currentIndex + 1 >= questions.length ? 'See Final Score' : 'Next Question'}
-            </button>
-          </div>
-        )}
-
-        {livePlayers.length > 1 && (
-          <div className="mini-board">
-            <p className="mini-board-label">Live</p>
-            <div className="mini-board-players">
-              {livePlayers.slice(0, 5).map((p, i) => (
-                <div key={p.player_name} className={`mini-player ${p.player_name === playerName ? 'you' : ''}`}>
-                  <span className="mini-rank">#{i + 1}</span>
-                  <span className="mini-name">{p.player_name}</span>
-                  <span className="mini-score">{p.score}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  )
-}
