@@ -212,4 +212,13 @@ export default function QuizLobby() {
                 <div key={p.id} className={`player-chip ${p.player_name === session?.player_name ? 'you' : ''}`}>
                   <span className="dot dot-green"></span>
                   {p.player_name}
-                  {p.player_name === session?.player_name
+                  {p.player_name === session?.player_name && <span style={{ fontSize: '0.6875rem', opacity: 0.6 }}> (you)</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
