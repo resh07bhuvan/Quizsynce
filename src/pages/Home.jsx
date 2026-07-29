@@ -32,8 +32,9 @@ export default function Home() {
     try {
       const { data, error } = await supabase
         .from('quizzes')
-        .select('id, title, code, status, question_count, created_at')
+        .select('id, title, status, question_count, created_at')
         .eq('is_active', true)
+        .neq('status', 'ended')
         .order('created_at', { ascending: false })
       if (!error && data) setActiveQuizzes(data)
     } catch {}
@@ -63,21 +64,17 @@ export default function Home() {
         setLoading(false)
         return
       }
+      if (data.status === 'ended') {
+        toast('This quiz has already ended.', 'error')
+        setLoading(false)
+        return
+      }
       sessionStorage.setItem('player_name', playerName.trim())
       navigate(`/quiz/${data.id}`)
     } catch (err) {
       toast('Something went wrong. Please try again.', 'error')
     }
     setLoading(false)
-  }
-
-  function handleQuickJoin(quiz) {
-    if (!playerName.trim()) {
-      toast('Enter your name first.', 'error')
-      return
-    }
-    sessionStorage.setItem('player_name', playerName.trim())
-    navigate(`/quiz/${quiz.id}`)
   }
 
   if (isAdmin) {
@@ -111,7 +108,7 @@ export default function Home() {
               <span className="hero-accent">together.</span>
             </h1>
             <p className="hero-sub">
-              Join a quiz with your code and compete with everyone in real time.
+              Enter the quiz code shared by your admin and compete with everyone in real time.
             </p>
           </div>
 
@@ -135,7 +132,7 @@ export default function Home() {
                 <input
                   id="code"
                   type="text"
-                  placeholder="e.g. ABC123"
+                  placeholder="Enter code from your admin"
                   value={quizCode}
                   onChange={e => setQuizCode(e.target.value.toUpperCase())}
                   maxLength={8}
@@ -177,18 +174,10 @@ export default function Home() {
                       </p>
                     </div>
                     <span className={`badge ${quiz.status === 'live' ? 'badge-green' : 'badge-blue'}`}>
-                      {quiz.status === 'live' ? 'Live' : quiz.status === 'waiting' ? 'Waiting' : quiz.status}
+                      {quiz.status === 'live' ? 'Live' : 'Waiting'}
                     </span>
                   </div>
-                  <div className="quiz-tile-footer">
-                    <code className="quiz-code">{quiz.code}</code>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => handleQuickJoin(quiz)}
-                    >
-                      Join
-                    </button>
-                  </div>
+                  <p className="text-sm text-muted">Enter the quiz code to join</p>
                 </div>
               ))}
             </div>
