@@ -32,7 +32,7 @@ Rules:
       'X-Title': 'QuizSynce'
     },
     body: JSON.stringify({
-      model: 'meta-llama/llama-3.2-3b-instruct:free',
+      model: 'mistralai/mistral-small-3.2-24b-instruct:free',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 2000
