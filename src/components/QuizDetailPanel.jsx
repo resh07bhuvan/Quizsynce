@@ -12,6 +12,8 @@ export default function QuizDetailPanel({ quiz, onClose, onToggleActive, onDelet
   const [showAddForm, setShowAddForm] = useState(false)
   const [timer, setTimer] = useState(quiz.timer || 12)
   const [savingTimer, setSavingTimer] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleValue, setTitleValue] = useState(quiz.title)
 
   useEffect(() => {
     fetchSessions()
@@ -97,6 +99,13 @@ export default function QuizDetailPanel({ quiz, onClose, onToggleActive, onDelet
     setSavingTimer(false)
   }
 
+  async function saveTitle() {
+    if (!titleValue.trim()) return
+    await supabase.from('quizzes').update({ title: titleValue.trim() }).eq('id', quiz.id)
+    setEditingTitle(false)
+    onRefresh()
+  }
+
   const shareUrl = `${window.location.origin}/quiz/${quiz.id}`
   function copyCode() { navigator.clipboard.writeText(quiz.code) }
   function copyLink() { navigator.clipboard.writeText(shareUrl) }
@@ -104,8 +113,25 @@ export default function QuizDetailPanel({ quiz, onClose, onToggleActive, onDelet
   return (
     <div className="detail-panel">
       <div className="detail-header">
-        <div>
-          <h2 className="detail-title">{quiz.title}</h2>
+        <div style={{ flex: 1, marginRight: '8px' }}>
+          {editingTitle ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={titleValue}
+                onChange={e => setTitleValue(e.target.value)}
+                style={{ fontSize: '1rem', padding: '6px 10px' }}
+                autoFocus
+              />
+              <button className="btn btn-primary btn-sm" onClick={saveTitle}>Save</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingTitle(false)}>Cancel</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h2 className="detail-title">{quiz.title}</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setTitleValue(quiz.title); setEditingTitle(true) }}>Edit</button>
+            </div>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <span className={`badge ${quiz.status === 'live' ? 'badge-green' : quiz.status === 'ended' ? 'badge-red' : 'badge-blue'}`}>
               {quiz.status}
