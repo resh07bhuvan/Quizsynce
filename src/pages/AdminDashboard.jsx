@@ -154,3 +154,152 @@ export default function AdminDashboard() {
 
         <div className="sidebar-stats">
           <p className="nav-label">Overview</p>
+          <div className="stat-row">
+            <span>Total quizzes</span>
+            <strong>{stats.total}</strong>
+          </div>
+          <div className="stat-row">
+            <span>Active</span>
+            <strong style={{ color: 'var(--success)' }}>{stats.active}</strong>
+          </div>
+          <div className="stat-row">
+            <span>Total players</span>
+            <strong>{stats.players}</strong>
+          </div>
+        </div>
+
+        <div className="sidebar-bottom">
+          <a href="/" className="nav-btn" target="_blank" rel="noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            Player View
+          </a>
+          <button className="nav-btn nav-btn-danger" onClick={handleLogout}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      <main className="admin-main">
+        <div className="admin-toolbar">
+          <div>
+            <h1 style={{ fontSize: '1.375rem', marginBottom: '4px' }}>Quiz Dashboard</h1>
+            <p className="text-sm text-muted">{quizzes.length} quiz{quizzes.length !== 1 ? 'zes' : ''} total</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowExcelModal(true)}>
+              + From Excel
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowTopicModal(true)}>
+              + From Topic
+            </button>
+          </div>
+        </div>
+
+        <div className="admin-content">
+          <div className={`quiz-list-panel ${selectedQuiz ? 'has-selection' : ''}`}>
+            {loading ? (
+              <div className="flex justify-center" style={{ padding: '60px' }}>
+                <span className="spinner spinner-lg"></span>
+              </div>
+            ) : quizzes.length === 0 ? (
+              <div className="empty-state">
+                <h3>No quizzes yet</h3>
+                <p>Create your first quiz from an Excel file or a topic.</p>
+                <div className="flex gap-3 justify-center mt-4">
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowExcelModal(true)}>
+                    From Excel
+                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowTopicModal(true)}>
+                    From Topic
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="quiz-list">
+                {quizzes.map(quiz => (
+                  <div
+                    key={quiz.id}
+                    className={`quiz-row ${selectedQuiz?.id === quiz.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedQuiz(quiz)}
+                  >
+                    <div className="quiz-row-main">
+                      <div className="quiz-row-info">
+                        <div className="flex items-center gap-2">
+                          <h3 className="quiz-row-title">{quiz.title}</h3>
+                          <span className={`badge ${
+                            quiz.status === 'live' ? 'badge-green' :
+                            quiz.status === 'ended' ? 'badge-red' : 'badge-blue'
+                          }`}>
+                            {quiz.status}
+                          </span>
+                          {!quiz.is_active && (
+                            <span className="badge" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+                              inactive
+                            </span>
+                          )}
+                        </div>
+                        <p className="quiz-row-meta">
+                          {quiz.question_count} questions
+                          {quiz.source_type && ` · ${quiz.source_type === 'excel' ? 'Excel' : 'Topic'}`}
+                          {quiz.source_label && ` · ${quiz.source_label}`}
+                        </p>
+                      </div>
+                      <code className="quiz-code">{quiz.code}</code>
+                    </div>
+                    <div className="quiz-row-actions" onClick={e => e.stopPropagation()}>
+                      <button
+                        className={`btn btn-sm ${quiz.is_active ? 'btn-secondary' : 'btn-primary'}`}
+                        onClick={() => toggleActive(quiz)}
+                      >
+                        {quiz.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => deleteQuiz(quiz)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedQuiz && (
+            <QuizDetailPanel
+              quiz={selectedQuiz}
+              onClose={() => setSelectedQuiz(null)}
+              onToggleActive={() => toggleActive(selectedQuiz)}
+              onDelete={() => deleteQuiz(selectedQuiz)}
+              onUpdateStatus={(s) => updateStatus(selectedQuiz, s)}
+              onRefresh={fetchQuizzes}
+            />
+          )}
+        </div>
+      </main>
+
+      {showExcelModal && (
+        <CreateFromExcelModal
+          onClose={() => setShowExcelModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
+      {showTopicModal && (
+        <CreateFromTopicModal
+          onClose={() => setShowTopicModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
+    </div>
+  )
+}
