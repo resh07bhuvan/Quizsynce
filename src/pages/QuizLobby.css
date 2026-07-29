@@ -1,0 +1,95 @@
+.lobby-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.lobby-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.lobby-main {
+  padding-top: 48px;
+  padding-bottom: 80px;
+}
+
+.lobby-title-section {
+  margin-bottom: 32px;
+}
+
+.lobby-quiz-title {
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  margin-bottom: 12px;
+}
+
+.joined-card {
+  margin-bottom: 32px;
+}
+
+.joined-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.joined-check {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--success-dim);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.waiting-pulse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.players-section {
+  margin-top: 32px;
+}
+
+.players-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.player-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.player-chip.you {
+  background: var(--accent-dim);
+  border-color: rgba(79, 142, 247, 0.3);
+  color: var(--text-primary);
+}
