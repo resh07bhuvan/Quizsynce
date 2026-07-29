@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAdmin } from '../lib/adminAuth.jsx'
 import { useToast } from '../lib/toast.jsx'
@@ -25,7 +25,6 @@ export default function Home() {
         fetchActiveQuizzes()
       })
       .subscribe()
-
     return () => supabase.removeChannel(channel)
   }, [])
 
@@ -36,7 +35,6 @@ export default function Home() {
         .select('id, title, code, status, question_count, created_at')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
-
       if (!error && data) setActiveQuizzes(data)
     } catch {}
     setLoadingQuizzes(false)
@@ -48,7 +46,6 @@ export default function Home() {
       toast('Enter both your name and quiz code.', 'error')
       return
     }
-
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -56,19 +53,16 @@ export default function Home() {
         .select('id, title, status, is_active')
         .eq('code', quizCode.trim().toUpperCase())
         .single()
-
       if (error || !data) {
         toast('Quiz not found. Check your code and try again.', 'error')
         setLoading(false)
         return
       }
-
       if (!data.is_active) {
         toast('This quiz is no longer active.', 'error')
         setLoading(false)
         return
       }
-
       sessionStorage.setItem('player_name', playerName.trim())
       navigate(`/quiz/${data.id}`)
     } catch (err) {
@@ -99,10 +93,7 @@ export default function Home() {
             <span className="logo-mark">Q</span>
             <span className="logo-text">QuizSynce</span>
           </div>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowAdminLogin(true)}
-          >
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowAdminLogin(true)}>
             Admin
           </button>
         </div>
@@ -180,3 +171,32 @@ export default function Home() {
                 <div key={quiz.id} className="quiz-tile card card-sm">
                   <div className="quiz-tile-header">
                     <div>
+                      <h3 className="quiz-tile-title">{quiz.title}</h3>
+                      <p className="text-sm text-muted mt-1">
+                        {quiz.question_count} question{quiz.question_count !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <span className={`badge ${quiz.status === 'live' ? 'badge-green' : 'badge-blue'}`}>
+                      {quiz.status === 'live' ? 'Live' : quiz.status === 'waiting' ? 'Waiting' : quiz.status}
+                    </span>
+                  </div>
+                  <div className="quiz-tile-footer">
+                    <code className="quiz-code">{quiz.code}</code>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleQuickJoin(quiz)}
+                    >
+                      Join
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {showAdminLogin && <AdminLoginModal onClose={() => setShowAdminLogin(false)} />}
+    </div>
+  )
+}
