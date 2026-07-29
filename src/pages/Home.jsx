@@ -177,7 +177,7 @@ export default function Home() {
                       {quiz.status === 'live' ? 'Live' : 'Waiting'}
                     </span>
                   </div>
-                  <p className="text-sm text-muted">Enter the quiz code to join</p>
+                  <p className="text-sm text-muted mt-2">Enter the quiz code to join</p>
                 </div>
               ))}
             </div>
