@@ -1,95 +1,215 @@
-.lobby-page {
-  min-height: 100vh;
-  background: var(--bg-primary);
-}
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase.js'
+import './QuizLobby.css'
 
-.lobby-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--bg-secondary);
-}
+export default function QuizLobby() {
+  const { quizId } = useParams()
+  const navigate = useNavigate()
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
+  const [quiz, setQuiz] = useState(null)
+  const [players, setPlayers] = useState([])
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [joining, setJoining] = useState(false)
+  const [playerName, setPlayerName] = useState(() => sessionStorage.getItem('player_name') || '')
+  const [error, setError] = useState('')
 
-.lobby-main {
-  padding-top: 48px;
-  padding-bottom: 80px;
-}
+  useEffect(() => {
+    fetchQuiz()
+    fetchPlayers()
 
-.lobby-title-section {
-  margin-bottom: 32px;
-}
+    const channel = supabase
+      .channel(`lobby_${quizId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'quizzes',
+        filter: `id=eq.${quizId}`
+      }, ({ new: updated }) => {
+        setQuiz(updated)
+        if (updated.status === 'live') {
+          navigate(`/quiz/${quizId}/play`)
+        }
+        if (updated.status === 'ended') {
+          navigate(`/quiz/${quizId}/results`)
+        }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'sessions',
+        filter: `quiz_id=eq.${quizId}`
+      }, () => {
+        fetchPlayers()
+      })
+      .subscribe()
 
-.lobby-quiz-title {
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  margin-bottom: 12px;
-}
+    return () => supabase.removeChannel(channel)
+  }, [quizId])
 
-.joined-card {
-  margin-bottom: 32px;
-}
+  useEffect(() => {
+    if (quiz?.status === 'live' && session) {
+      navigate(`/quiz/${quizId}/play`)
+    }
+    if (quiz?.status === 'ended') {
+      navigate(`/quiz/${quizId}/results`)
+    }
+  }, [quiz?.status, session])
 
-.joined-status {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
+  async function fetchQuiz() {
+    const { data } = await supabase
+      .from('quizzes')
+      .select('*')
+      .eq('id', quizId)
+      .single()
 
-.joined-check {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--success-dim);
-  color: var(--success);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
+    if (!data || !data.is_active) {
+      navigate('/')
+      return
+    }
+    setQuiz(data)
+    setLoading(false)
+  }
 
-.waiting-pulse {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
+  async function fetchPlayers() {
+    const { data } = await supabase
+      .from('sessions')
+      .select('id, player_name, created_at')
+      .eq('quiz_id', quizId)
+      .order('created_at')
+    if (data) setPlayers(data)
+  }
 
-.players-section {
-  margin-top: 32px;
-}
+  async function handleJoin(e) {
+    e.preventDefault()
+    if (!playerName.trim()) { setError('Enter your name.'); return }
 
-.players-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+    setJoining(true)
+    setError('')
 
-.player-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
+    const name = playerName.trim()
+    sessionStorage.setItem('player_name', name)
 
-.player-chip.you {
-  background: var(--accent-dim);
-  border-color: rgba(79, 142, 247, 0.3);
-  color: var(--text-primary);
-}
+    const { data: existing } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .eq('player_name', name)
+      .maybeSingle()
+
+    if (existing) {
+      setSession(existing)
+      sessionStorage.setItem(`session_${quizId}`, existing.id)
+      if (quiz?.status === 'live') navigate(`/quiz/${quizId}/play`)
+      setJoining(false)
+      return
+    }
+
+    const { data: sess, error: sessErr } = await supabase
+      .from('sessions')
+      .insert({
+        quiz_id: quizId,
+        player_name: name,
+        score: 0,
+        answers_count: 0,
+        answers: {}
+      })
+      .select()
+      .single()
+
+    if (sessErr) {
+      setError('Could not join. Try again.')
+      setJoining(false)
+      return
+    }
+
+    setSession(sess)
+    sessionStorage.setItem(`session_${quizId}`, sess.id)
+    if (quiz?.status === 'live') navigate(`/quiz/${quizId}/play`)
+    setJoining(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="lobby-page flex items-center justify-center" style={{ minHeight: '100vh' }}>
+        <span className="spinner spinner-lg"></span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="lobby-page">
+      <header className="lobby-header">
+        <a href="/" className="logo">
+          <span className="logo-mark">Q</span>
+          <span className="logo-text">QuizSynce</span>
+        </a>
+        <span className={`badge ${quiz?.status === 'live' ? 'badge-green' : 'badge-blue'}`}>
+          {quiz?.status === 'live' ? 'Live now' : 'Waiting'}
+        </span>
+      </header>
+
+      <main className="lobby-main container-sm">
+        <div className="lobby-title-section">
+          <h1 className="lobby-quiz-title">{quiz?.title}</h1>
+          <p className="text-sm text-muted mt-1">{quiz?.question_count} questions</p>
+        </div>
+
+        {!session ? (
+          <div className="card">
+            <h2 style={{ fontSize: '1rem', marginBottom: '16px' }}>Enter to join</h2>
+            <form onSubmit={handleJoin}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label>Your name</label>
+                <input
+                  type="text"
+                  placeholder="How should we call you?"
+                  value={playerName}
+                  onChange={e => { setPlayerName(e.target.value); setError('') }}
+                  maxLength={30}
+                  autoFocus
+                />
+                {error && <p style={{ color: 'var(--error)', fontSize: '0.8125rem', marginTop: '4px' }}>{error}</p>}
+              </div>
+              <button type="submit" className="btn btn-primary w-full" disabled={joining}>
+                {joining ? <><span className="spinner"></span> Joining...</> : 'Join Quiz'}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="card joined-card">
+            <div className="joined-status">
+              <div className="joined-check">✓</div>
+              <div>
+                <p style={{ fontWeight: '600' }}>You're in, {session.player_name}!</p>
+                <p className="text-sm text-muted mt-1">
+                  {quiz?.status === 'live' ? 'Quiz is live! Starting...' : 'Waiting for the admin to start the quiz.'}
+                </p>
+              </div>
+            </div>
+            {quiz?.status === 'waiting' && (
+              <div className="waiting-pulse">
+                <span className="dot dot-blue pulse"></span>
+                <span className="text-sm text-muted">Waiting for admin to start</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="players-section">
+          <div className="flex items-center justify-between mb-3">
+            <h2 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Players joined
+            </h2>
+            <span className="badge badge-blue">{players.length}</span>
+          </div>
+          {players.length === 0 ? (
+            <p className="text-sm text-muted">No one has joined yet.</p>
+          ) : (
+            <div className="players-grid">
+              {players.map(p => (
+                <div key={p.id} className={`player-chip ${p.player_name === session?.player_name ? 'you' : ''}`}>
+                  <span className="dot dot-green"></span>
+                  {p.player_name}
+                  {p.player_name === session?.player_name
