@@ -105,3 +105,98 @@ export default function QuizDetailPanel({ quiz, onClose, onToggleActive, onDelet
             <button
               className={`btn btn-sm ${quiz.status === 'ended' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => onUpdateStatus('ended')}
+            >Ended</button>
+          </div>
+        </div>
+        <div className="control-group">
+          <span className="text-sm text-muted">Visibility</span>
+          <button
+            className={`btn btn-sm ${quiz.is_active ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={onToggleActive}
+          >
+            {quiz.is_active ? 'Deactivate' : 'Activate'}
+          </button>
+        </div>
+      </div>
+
+      <div className="detail-tabs">
+        <button className={`tab-btn ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>
+          Players ({sessions.length})
+        </button>
+        <button className={`tab-btn ${tab === 'questions' ? 'active' : ''}`} onClick={() => setTab('questions')}>
+          Questions ({questions.length})
+        </button>
+      </div>
+
+      <div className="detail-body">
+        {tab === 'overview' && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-muted">{sessions.length} player{sessions.length !== 1 ? 's' : ''} joined</p>
+              {sessions.length > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={resetSessions}>
+                  Clear sessions
+                </button>
+              )}
+            </div>
+            {loadingSessions ? (
+              <div className="flex justify-center" style={{ padding: '24px' }}>
+                <span className="spinner"></span>
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="empty-state" style={{ padding: '32px 0' }}>
+                <p>No players yet. Share the code to get started.</p>
+              </div>
+            ) : (
+              <div className="leaderboard">
+                {sessions.map((s, i) => (
+                  <div key={s.id} className="leaderboard-row">
+                    <span className="rank">#{i + 1}</span>
+                    <div className="player-info">
+                      <span className="player-name">{s.player_name}</span>
+                      <span className="player-meta">
+                        {s.answers_count}/{quiz.question_count} answered
+                        {s.completed_at && ' · done'}
+                      </span>
+                    </div>
+                    <span className="player-score">{s.score ?? 0} pts</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'questions' && (
+          <div className="questions-list">
+            {questions.length === 0 ? (
+              <div className="empty-state" style={{ padding: '32px 0' }}>
+                <p>No questions loaded.</p>
+              </div>
+            ) : questions.map((q, i) => (
+              <div key={q.id} className="question-preview">
+                <div className="q-number">{i + 1}</div>
+                <div className="q-content">
+                  <p className="q-text">{q.question}</p>
+                  <div className="q-options">
+                    {q.options.map((opt, j) => (
+                      <span key={j} className={`q-opt ${j === q.correct ? 'correct' : ''}`}>
+                        {opt}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="detail-footer">
+        <button className="btn btn-danger btn-sm" onClick={onDelete}>
+          Delete Quiz
+        </button>
+      </div>
+    </div>
+  )
+}
