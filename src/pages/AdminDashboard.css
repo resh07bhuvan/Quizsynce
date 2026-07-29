@@ -184,4 +184,16 @@
   margin-top: 3px;
 }
 
-.quiz-row-actions
+.quiz-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .admin-sidebar {
+    display: none;
+  }
+  .quiz-list-panel.has-selection {
+    display: none;
+  }
+}
