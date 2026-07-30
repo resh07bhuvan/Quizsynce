@@ -170,7 +170,7 @@ export default function QuizLobby() {
                   placeholder="How should we call you?"
                   value={playerName}
                   onChange={e => { setPlayerName(e.target.value); setError('') }}
-                  maxLength={30}
+                  maxLength={10}
                   autoFocus
                 />
                 {error && <p style={{ color: 'var(--error)', fontSize: '0.8125rem', marginTop: '4px' }}>{error}</p>}
