@@ -123,7 +123,7 @@ export default function Home() {
                   placeholder="Enter your name"
                   value={playerName}
                   onChange={e => setPlayerName(e.target.value)}
-                  maxLength={30}
+                  maxLength={10}
                   autoComplete="off"
                 />
               </div>
